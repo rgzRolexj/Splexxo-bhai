@@ -1,6 +1,7 @@
 // ==================== CONFIG =====================
 const YOUR_API_KEYS = ["SPLEXXO"];
-const TARGET_API = "https://numinfo.gauravcyber0.workers.dev/";
+const TARGET_API = "https://ox-tawny.vercel.app/search_mobile";
+const TARGET_API_KEY = "gavravrandigey";
 const CACHE_TIME = 3600 * 1000;
 // =================================================
 
@@ -65,8 +66,8 @@ export default async function handler(req, res) {
         return res.status(200).send(cached.response);
     }
 
-    // Upstream URL build
-    const url = `${TARGET_API}?mobile=${encodeURIComponent(mobile)}`;
+    // Upstream URL build - NEW API FORMAT
+    const url = `${TARGET_API}?mobile=${encodeURIComponent(mobile)}&api_key=${TARGET_API_KEY}`;
 
     try {
         const upstream = await fetch(url);
