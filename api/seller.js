@@ -1,24 +1,35 @@
 // ==================== CONFIG =====================
 const YOUR_API_KEYS = ["SPLEXXO"];
-const TARGET_API = "https://ox-tawny.vercel.app/search_mobile";
-const TARGET_API_KEY = "gavravrandigey";
+const TARGET_API = "https://dark-trace-networks.vercel.app/api";
+const TARGET_API_KEY = "DarkTrace_Network";
 const CACHE_TIME = 3600 * 1000;
 // =================================================
 
 const cache = new Map();
 
-function cleanOxmzoo(value) {
+// Special cleaning for DarkTrace references
+function cleanDarkTraceData(value) {
     if (typeof value == "string") {
-        return value.replace(/@oxmzoo/gi, "").trim();
+        // Remove all DarkTrace references
+        let cleaned = value.replace(/@DarkTrace_Networks/gi, "");
+        cleaned = cleaned.replace(/DarkTrace/gi, "");
+        cleaned = cleaned.replace(/@DarkTrace_Networks/gi, "");
+        return cleaned.trim();
     }
     if (Array.isArray(value)) {
-        return value.map(cleanOxmzoo);
+        return value.map(cleanDarkTraceData);
     }
     if (value && typeof value === "object") {
         const cleaned = {};
         for (const key of Object.keys(value)) {
-            if (key.toLowerCase().includes("oxmzoo")) continue;
-            cleaned[key] = cleanOxmzoo(value[key]);
+            const keyLower = key.toLowerCase();
+            // Remove DarkTrace related keys
+            if (keyLower.includes("@DarkTrace_Networks") || 
+                keyLower.includes("darktrace") ||
+                keyLower.includes("dark_trace")) {
+                continue;
+            }
+            cleaned[key] = cleanDarkTraceData(value[key]);
         }
         return cleaned;
     }
@@ -34,31 +45,39 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: "method not allowed" });
     }
 
-    const { mobile: rawMobile, key: rawKey } = req.query || {};
+    const { type, term, mobile, phone, number, key } = req.query || {};
 
-    // Param check
-    if (!rawMobile || !rawKey) {
+    // Param check - multiple parameter options
+    const searchType = type || "mobile";
+    const searchTerm = term || mobile || phone || number;
+    
+    if (!searchTerm || !key) {
         res.setHeader("Content-Type", "application/json; charset=utf-8");
-        return res.status(400).json({ error: "missing parameters: mobile or key" });
+        return res.status(400).json({ 
+            error: "missing parameters", 
+            details: "Use: ?type=mobile&term=7676162658&key=SPLEXXO OR ?mobile=7676162658&key=SPLEXXO" 
+        });
     }
 
-    const mobile = String(rawMobile).replace(/\D/g, "");
-    const key = String(rawKey).trim();
+    const cleanSearchTerm = String(searchTerm).replace(/\D/g, "");
+    const cleanKey = String(key).trim();
 
     // API key check
-    if (!YOUR_API_KEYS.includes(key)) {
+    if (!YOUR_API_KEYS.includes(cleanKey)) {
         res.setHeader("Content-Type", "application/json; charset=utf-8");
         return res.status(403).json({ error: "invalid key" });
     }
 
-    if (mobile.length < 10) {
+    // Mobile number format check
+    if (cleanSearchTerm.length < 10) {
         res.setHeader("Content-Type", "application/json; charset=utf-8");
-        return res.status(400).json({ error: "invalid mobile number" });
+        return res.status(400).json({ error: "invalid mobile number format" });
     }
 
     // Cache check
     const now = Date.now();
-    const cached = cache.get(mobile);
+    const cacheKey = `${searchType}-${cleanSearchTerm}`;
+    const cached = cache.get(cacheKey);
 
     if (cached && now - cached.timestamp < CACHE_TIME) {
         res.setHeader("X-Proxy-Cache", "HIT");
@@ -66,56 +85,67 @@ export default async function handler(req, res) {
         return res.status(200).send(cached.response);
     }
 
-    // Upstream URL build - NEW API FORMAT
-    const url = `${TARGET_API}?mobile=${encodeURIComponent(mobile)}&api_key=${TARGET_API_KEY}`;
+    // Mobile Trace API call
+    const url = `${TARGET_API}?key=${TARGET_API_KEY}&type=${searchType}&term=${encodeURIComponent(cleanSearchTerm)}`;
 
     try {
-        const upstream = await fetch(url);
-        const raw = await upstream.text();
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36',
+                'Accept': 'application/json',
+            }
+        });
 
-        if (!upstream.ok || !raw) {
-            res.setHeader("Content-Type", "application/json; charset=utf-8");
-            return res.status(502).json({
-                error: "upstream API failed",
-                details: `HTTP ${upstream.status}`,
-            });
+        if (!response.ok) {
+            throw new Error(`Mobile Trace API failed: ${response.status}`);
         }
 
-        let responseBody;
+        const data = await response.json();
 
-        try {
-            // JSON try parse
-            let data = JSON.parse(raw);
-
-            // @oxmzoo clean
-            data = cleanOxmzoo(data);
-
-            // Apna clean branding
-            data.developer = "splexxo";
-            data.credit_by = "splexx";
-            data.powered_by = "splexxo-info-api";
-
-            responseBody = JSON.stringify(data);
-        } catch (e) {
-            // Agar JSON nahi hai, to raw text se @oxmzoo hata do
-            const cleanedText = raw.replace(/@oxmzoo/gi, "").trim();
-            responseBody = cleanedText;
+        // Deep clean DarkTrace references
+        const cleanedData = cleanDarkTraceData(data);
+        
+        // Remove any remaining DarkTrace references
+        const finalCleanedData = {};
+        for (const [key, value] of Object.entries(cleanedData)) {
+            const keyLower = key.toLowerCase();
+            const valueStr = String(value).toLowerCase();
+            
+            if (!keyLower.includes('darktrace') && 
+                !keyLower.includes('dark_trace') &&
+                !valueStr.includes('@DarkTrace_Networks') &&
+                !valueStr.includes('@DarkTrace_Networks')) {
+                finalCleanedData[key] = value;
+            }
         }
+
+        // Add branding
+        const finalResponse = {
+            ...finalCleanedData,
+            developer: "splexxo",
+            credit_by: "splexx",
+            powered_by: "splexxo-info-api",
+            timestamp: new Date().toISOString()
+        };
+
+        const responseBody = JSON.stringify(finalResponse);
 
         // Cache save
-        cache.set(mobile, {
-            timestamp: Date.now(),
+        cache.set(cacheKey, {
+            timestamp: now,
             response: responseBody,
         });
 
         res.setHeader("X-Proxy-Cache", "MISS");
         res.setHeader("Content-Type", "application/json; charset=utf-8");
         return res.status(200).send(responseBody);
+
     } catch (err) {
         res.setHeader("Content-Type", "application/json; charset=utf-8");
         return res.status(502).json({
-            error: "upstream request error",
+            error: "Mobile Trace API request error",
             details: err.message || "unknown error",
+            developer: "splexxo"
         });
     }
 }
