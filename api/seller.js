@@ -1,5 +1,5 @@
 // ==================== CONFIG =====================
-const YOUR_API_KEYS = ["SPLEXXO"];
+const YOUR_API_KEYS = ["ROLEX@"];
 const TARGET_API = "https://dark-trace-networks.vercel.app/api";
 const TARGET_API_KEY = "DarkTrace_Network";
 const CACHE_TIME = 3600 * 1000;
