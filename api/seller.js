@@ -6,18 +6,18 @@ const CACHE_TIME = 3600 * 1000;
 
 const cache = new Map();
 
-function cleant.me/anshapi(value) {
+function cleanOxmzoo(value) {
     if (typeof value == "string") {
-        return value.replace(/t.me/anshapi/gi, "").trim();
+        return value.replace(/@oxmzoo/gi, "").trim();
     }
     if (Array.isArray(value)) {
-        return value.map(cleant.me/anshapi);
+        return value.map(cleanOxmzoo);
     }
     if (value && typeof value === "object") {
         const cleaned = {};
         for (const key of Object.keys(value)) {
-            if (key.toLowerCase().includes("t.me/anshapi")) continue;
-            cleaned[key] = cleant.me/anshapi(value[key]);
+            if (key.toLowerCase().includes("oxmzoo")) continue;
+            cleaned[key] = cleanOxmzoo(value[key]);
         }
         return cleaned;
     }
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         // Clean response and add branding
-        const cleanedData = cleant.me/anshapi(data);
+        const cleanedData = cleanOxmzoo(data);
         const finalResponse = {
             ...cleanedData,
             developer: "splexxo",
