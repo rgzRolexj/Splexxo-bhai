@@ -1,5 +1,5 @@
 // ==================== CONFIG =====================
-const YOUR_API_KEYS = ["SPLEXXO"]; // Tumhara Key
+const YOUR_API_KEYS = ["ROLEX@""; // Tumhara Key
 const TARGET_API = "https://darkie.x10.mx/numapi.php"; // Source API
 const UPSTREAM_KEY = "DEVIL404"; // Source API ki Key
 const CACHE_TIME = 3600 * 1000; // 1 Hour Cache
